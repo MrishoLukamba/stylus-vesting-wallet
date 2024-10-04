@@ -1,4 +1,7 @@
 //! Implementation of the [`Erc1155`] token standard.
+
+pub mod extensions;
+
 use alloc::{vec, vec::Vec};
 
 use alloy_primitives::{fixed_bytes, Address, FixedBytes, Uint, U256};
@@ -15,8 +18,6 @@ use crate::utils::{
     introspection::erc165::{Erc165, IErc165},
     math::storage::SubAssignUnchecked,
 };
-
-pub mod extensions;
 
 sol! {
     /// Emitted when `value` amount of tokens of type `token_id` are transferred from `from` to `to` by `operator`.
