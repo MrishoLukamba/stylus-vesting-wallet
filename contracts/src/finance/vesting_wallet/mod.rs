@@ -1,88 +1,102 @@
 //! Implementation of `VESTING_WALLET`
 //!
+//! Handles the vesting of Ether and ERC20 tokens for a given beneficiary
+//! Custody of multiple tokens can be given to this contract,
+//! which will release the token to the beneficiary following a given,
+//! customizable, vesting schedule
+//!
 //! This contract has referenced the `OpenZeppelin` vesting_wallet
-//! implementation but improved on the following aspect;
-//! - Allowing multiple beneficiaries per wallet
+//! implementation guidelines
+//! [VestingWallet]
+//! This contract module inherits `ERC-20` and `Ownable` contracts
 
-// =============================== Implementation draft
-// ===========================================
+extern crate alloc;
 
-// design consideration
+use alloy_primitives::{Address, U256, U64};
+use alloy_sol_types::sol;
+use openzeppelin_stylus_proc::interface_id;
+use stylus_sdk::{
+    prelude::storage,
+    storage::{StorageMap, StorageU64},
+};
+use alloc::vec::Vec;
+use stylus_sdk::prelude::SolidityError;
+use stylus_sdk::storage::StorageU256;
 
-// - the implementation wil be based on trait oriented programming, and allowing
-//   easy extensions
 
-// dependency libraries
-// - ERC-20, as allowing different ERC-20 token in vesting plans
+sol! {
+  /// Event emitted when ETHER token is being released and transferred from contract(`this`) to benefeciary
+  /// account(`benef`), tracking `amount` released and `beneficiary` account
+  ///
+  /// Note that this is done after calling `release_eth` method
+  #[allow(missing_docs)]
+  event EtherReleased(address indexed beneficiary, uint256 value);
+  /// Event emitted when ERC-20 token is being released and transferred from contract(`this`) to benefeciary
+  /// account(`benef`), tracking `amount` released and `beneficiary` account
+  ///
+  /// Note that this is done after calling `release_token` method
+  #[allow(missing_docs)]
+  event ERC20Released(address indexed beneficiary, address indexed token, uint256 value);
+}
 
-// - enabling the contract to have multiple beneficiaries each with vesting
-//   schedule and token in place
-//      - this will have each beneficiary with token,amount and duration vested
-//        info in place
-//      - beneficiary can have multiple vesting schedules // extra feature
-//      - the limitation will be , only 1 token can be vested per be schedule
+sol! {
+    /// Error returned when the beneficiary cannot claim the tokens, as the schedule does not allow
+    /// at that particular time.
+    ///
+    /// This error is associated with `release_eth`
+    #[derive(Debug)]
+    #[allow(missing_docs)]
+    error CannotReleaseETh();
 
-// - the contract should allow beneficiary to update their EOA, and the vesting
-//   should continue as normal
+    /// Error returned when the beneficiary cannot claim the tokens, as the schedule does not allow
+    /// at that particular time.
+    ///
+    /// This error is associated with `release_erc20`
+    #[derive(Debug)]
+    #[allow(missing_docs)]
+    error CannotReleaseERC20();
+}
 
-// - vesting will be having different schedules all dictated by curves as
-//   backend , i.e, quadratic curves, linear ( as this is the default), etc ..
+/// An Error Type defined for [VestingWallet]
+#[derive(SolidityError,Debug)]
+pub enum Error {
+    /// This error is associated with `release_eth`
+    CannotReleaseEth(CannotReleaseETh),
+    /// This error is associated with `release_erc20`
+    CannotReleaseERC20(CannotReleaseERC20)
+}
 
-// - the contract will have a mapping of ERC-20 token addresses to total amount
-//   as it allows multiple tokens to be vested
+/// State of Vesting_Wallet
+#[storage]
+pub struct VestingWallet {
+    /// Total Ether tokens released from the contract
+    eth_released: StorageU256,
+    /// Total amount ERC-20 tokens released from the contract
+    erc20_released: StorageMap<Address, StorageU256>,
+    /// Start timestamp set initially, Note this is immutable after being set
+    start: StorageU64,
+    /// Duration set initially for the vesting, Note this is immutable after
+    /// being set
+    duration: StorageU64,
+}
 
-// - all OpenZeppelin vesting_wallet functions implemented are applicable here
+/// Trait `Vesting` defines all necessary vesting functionality per
+/// `OpenZeppelin` solidity implementation
+/// For extensibility purposes the name has a suffix indicating the versioning
+/// i.e `VestingV1` indicating version 1
+#[interface_id]
+pub trait VestingV1 {
+    type Error: Into<Vec<u8>>;
+    fn receive_eth() -> Result<(),Vec<u8>>;
+    fn receive_erc20_token(token: Address) -> Result<(),Vec<u8>>;
 
-// - things to answer, as I dont have clear path for now is;
-//      - to handle adjustable supply tokens reflection on vesting schedules
-//      - vesting admin -> controller of the vesting contract, as this can be a
-//        single account or an account which is controlled by governance
+    fn release_eth() -> Result<(),Self::Error>;
 
-// =================================================================================================
+    fn release_erc20(token:Address) -> Result<(),Self::Error>;
 
-// pseudo code
+    fn vested_eth_amount() -> U256;
 
-// important data structure
+    fn vested_erc20_amount(token:Address) -> U256;
 
-// struct VestingInfo -> (starting timestamp, duration, ERC-20 token, total
-// allocated amount, total amount vested, schedule curve )
-
-// storage
-//  - vesting_admin: Address,
-
-//  - mapping( address token => amount) _amount // indicating multiple supported
-//    and allocated ERC-20 tokens for vesting in the contract
-
-//  - mapping( address token => amount) _released // indicating total amount
-//    released per token throughout the contract
-
-//  - mapping( VestingInfo => address)
-
-// constructor
-//  - the initial beneficiary and the vesting schedule should be set, and the
-//    admin of the contract
-
-// errors
-// - all OpenZeppelin errors specified in vesting-wallet implementation are
-//   applicable and any other error will be introduced based on the function
-//   implementation
-
-// events
-//  - all OpenZeppelin events specified in vesting-wallet implementation are
-//    applicable and any other events will be introduced based on the function
-//    implementation
-
-// ================================================================================================
-// getter functions
-//  - all getter functions should specify which beneficiary address to return
-//    the info about
-
-// key setter functions
-//  - receive_eth()
-//  - receive_erc20(token address)
-//  - add_vesting_schedule(beneficiary)
-
-// key pure functions ( computation )
-// as every vesting schedule curve will be based on one trait which will
-// calculate and return
-//  - remaining_vesting_schedule,
+    fn vesting_schedule(total_alloc: U256, time: U64) -> U256;
+}
