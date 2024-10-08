@@ -87,16 +87,16 @@ pub struct VestingWallet {
 #[interface_id]
 pub trait VestingV1 {
     type Error: Into<Vec<u8>>;
-    fn receive_eth() -> Result<(),Vec<u8>>;
-    fn receive_erc20_token(token: Address) -> Result<(),Vec<u8>>;
+    fn receive_eth(&mut self) -> Result<(),Vec<u8>>;
+    fn receive_erc20_token(&mut self,token: Address) -> Result<(),Vec<u8>>;
 
-    fn release_eth() -> Result<(),Self::Error>;
+    fn release_eth(&mut self) -> Result<(),Self::Error>;
 
-    fn release_erc20(token:Address) -> Result<(),Self::Error>;
+    fn release_erc20(&mut self,token:Address) -> Result<(),Self::Error>;
 
-    fn vested_eth_amount() -> U256;
+    fn vested_eth_amount(&self) -> U256;
 
-    fn vested_erc20_amount(token:Address) -> U256;
+    fn vested_erc20_amount(&self,token:Address) -> U256;
 
-    fn vesting_schedule(total_alloc: U256, time: U64) -> U256;
+    fn vesting_schedule(&self,total_alloc: U256, time: U64) -> U256;
 }
