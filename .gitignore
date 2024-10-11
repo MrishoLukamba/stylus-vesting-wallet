@@ -10,4 +10,4 @@ docs/build/
 
 **/nitro-testnode
 /.vscode
-
+/.idea
