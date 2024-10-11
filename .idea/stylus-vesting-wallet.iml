@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/benches/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/contracts-proc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/contracts/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/access-control/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/access-control/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/basic/script/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/basic/token/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/ecdsa/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/ecdsa/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc20-permit/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc20-permit/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc20/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc20/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721-consecutive/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721-consecutive/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721-metadata/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721-metadata/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/erc721/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/merkle-proofs/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/ownable/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/ownable/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/crypto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/e2e-proc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/e2e/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/motsu-proc/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/motsu/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

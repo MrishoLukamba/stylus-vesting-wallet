@@ -561,8 +561,7 @@ mod tests {
 
     use super::{Erc20, Error, IErc20};
     use crate::{
-        token::erc721::{Erc721, IErc721},
-        utils::introspection::erc165::IErc165,
+        token::erc721::IErc721, utils::introspection::erc165::IErc165,
     };
 
     #[motsu::test]
