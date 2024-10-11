@@ -13,19 +13,18 @@
 extern crate alloc;
 
 use crate::access::ownable::Ownable;
+use alloc::vec::Vec;
 use alloy_primitives::{uint, Address, U256, U64};
 use alloy_sol_types::sol_data::Uint;
 use alloy_sol_types::{sol, SolType};
-use ethabi;
 use ethabi::Token;
 use openzeppelin_stylus_proc::interface_id;
 use stylus_sdk::call::{call, static_call, transfer_eth, Call};
 use stylus_sdk::prelude::{public, SolidityError, TopLevelStorage};
-use stylus_sdk::storage::StorageU256;
 use stylus_sdk::{
     block, contract, evm, function_selector,
     prelude::storage,
-    storage::{StorageMap, StorageU64},
+    storage::{StorageMap, StorageU64, StorageU256},
 };
 
 sol! {
@@ -111,8 +110,10 @@ pub trait IVesting {
     ///
     /// Emits [EtherReleased] event
     ///
-    /// Infallible function
-    fn release_eth(&mut self);
+    /// **Error**
+    ///
+    /// Returns encoded error type defined on `transfer_eth` function
+    fn release_eth(&mut self) -> Result<(), Vec<u8>>;
 
     /// Beneficiary will call this function to receive vested ERC-20 tokens
     ///
@@ -183,15 +184,16 @@ impl IVesting for VestingWallet {
     #[payable]
     fn receive_eth(&mut self) {}
 
-    fn release_eth(&mut self) {
+    fn release_eth(&mut self) -> Result<(), Vec<u8>> {
         let amount = self.releasable_eth();
         let current_eth_released = self.released_eth() + amount;
         self.eth_released.set(current_eth_released);
 
         let owner = self.ownable.owner();
         // SAFETY: transfer cannot fail;
-        transfer_eth(owner, amount).unwrap();
-        evm::log(EtherReleased { beneficiary: owner, value: amount })
+        transfer_eth(owner, amount)?;
+        evm::log(EtherReleased { beneficiary: owner, value: amount });
+        Ok(())
     }
 
     fn release_erc20(&mut self, token: Address) -> Result<(), Self::Error> {

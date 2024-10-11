@@ -29,6 +29,8 @@
       <sourceFolder url="file://$MODULE_DIR$/lib/e2e/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/motsu-proc/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/motsu/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vesting-wallet/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/vesting-wallet/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
