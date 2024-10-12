@@ -24,7 +24,7 @@ use stylus_sdk::prelude::{public, SolidityError, TopLevelStorage};
 use stylus_sdk::{
     block, contract, evm, function_selector,
     prelude::storage,
-    storage::{StorageMap, StorageU64, StorageU256},
+    storage::{StorageMap, StorageU256, StorageU64},
 };
 
 sol! {
@@ -102,6 +102,10 @@ pub trait IVesting {
 
     /// Beneficiary will call this function to receive vested ether tokens
     ///
+    /// Gets the amount of releasable eth, updates the `eth_released` state and calls
+    /// `transfer_eth` with `owner` as the beneficiary and `amount` of released eth per
+    /// the `timestamp`
+    ///
     /// **Arguments**
     ///
     ///  * `&mut self` - allowing mutating contract and beneficiary account balance state
@@ -116,6 +120,10 @@ pub trait IVesting {
     fn release_eth(&mut self) -> Result<(), Vec<u8>>;
 
     /// Beneficiary will call this function to receive vested ERC-20 tokens
+    ///
+    /// Gets the amount of releasable erc20, updates the `erc20_released` state and constructs
+    /// a `ERC20::transfer` remote call with `owner` as the beneficiary and `amount` of released
+    /// Erc20 token per the `timestamp`
     ///
     /// **Arguments**
     ///
@@ -142,6 +150,8 @@ pub trait IVesting {
     /// Calculates the amount of ERC-20 that has already vested.
     /// Default implementation is a linear vesting curve.
     ///
+    /// Gets the contract's Erc20 balance by constructing a `Erc20::balance_of` remote call
+    ///
     /// **Arguments**
     ///
     /// * `token` - Erc20 contract address
@@ -149,7 +159,8 @@ pub trait IVesting {
     ///
     /// **Error**
     ///
-    /// returns [FailedToDecode] or [RemoteContractCallFailed]
+    /// * returns [FailedToDecode] if the value returned from the remote calls fails to decode
+    /// * returns [RemoteContractCallFailed] if the remote call fails
     fn vested_erc20_amount(
         &mut self,
         token: Address,
@@ -185,39 +196,11 @@ impl IVesting for VestingWallet {
     fn receive_eth(&mut self) {}
 
     fn release_eth(&mut self) -> Result<(), Vec<u8>> {
-        let amount = self.releasable_eth();
-        let current_eth_released = self.released_eth() + amount;
-        self.eth_released.set(current_eth_released);
-
-        let owner = self.ownable.owner();
-        // SAFETY: transfer cannot fail;
-        transfer_eth(owner, amount)?;
-        evm::log(EtherReleased { beneficiary: owner, value: amount });
-        Ok(())
+        self._release_eth()
     }
 
     fn release_erc20(&mut self, token: Address) -> Result<(), Self::Error> {
-        let amount = self.releasable_erc20(token)?;
-        let current_erc20_released = self.released_erc20(token) + amount;
-        self.erc20_released.insert(token, current_erc20_released);
-
-        // remote Erc20 contract transfer call
-        let call_function =
-            function_selector!("transfer", Address, U256).to_vec();
-        // SAFETY: cannot panic as address are 20 bytes in length;
-        let beneficiary: [u8; 20] = self.ownable.owner().try_into().unwrap();
-
-        let call_data = ethabi::encode(&[
-            Token::Bytes(call_function),
-            Token::Address(beneficiary.into()),
-            Token::Bytes(amount.to_be_bytes_vec()),
-        ]);
-
-        let _result =
-            call(Call::new_in(self), token, &call_data).map_err(|_| {
-                Error::RemoteContractCallFailed(RemoteContractCallFailed {})
-            })?;
-        Ok(())
+        self._release_erc20(token)
     }
 
     fn vested_eth_amount(&self, timestamp: u64) -> U256 {
@@ -232,36 +215,7 @@ impl IVesting for VestingWallet {
         token: Address,
         timestamp: u64,
     ) -> Result<U256, Self::Error> {
-        // remote ERC20 contract balance_of call
-        let balance: U256 = {
-            let call_function =
-                function_selector!("balanceOf", Address).to_vec();
-            // SAFETY: cannot panic as address are 20 bytes in length;
-            let vesting_address: [u8; 20] =
-                contract::address().to_vec().try_into().unwrap();
-
-            let call_data = ethabi::encode(&[
-                Token::Bytes(call_function),
-                Token::Address(vesting_address.into()),
-            ]);
-
-            let encoded_erc20_balance = static_call(
-                Call::new_in(self),
-                token,
-                &call_data,
-            )
-            .map_err(|_| {
-                Error::RemoteContractCallFailed(RemoteContractCallFailed {})
-            })?;
-
-            Uint::<256>::abi_decode(&encoded_erc20_balance, true)
-                .map_err(|_| Error::FailedToDecodeValue(FailedToDecode {}))?
-        };
-
-        // SAFETY: cannot panic, as timestamp is always u64;
-        let timestamp = U64::try_from(timestamp).unwrap();
-        Ok(self
-            .vesting_schedule(balance + self.released_erc20(token), timestamp))
+        self._vested_erc20_amount(token, timestamp)
     }
 
     fn start(&self) -> U256 {
@@ -324,6 +278,82 @@ impl VestingWallet {
         let timestamp = block::timestamp();
         let vested_erc20 = self.vested_erc20_amount(token, timestamp)?;
         Ok(vested_erc20 - self.released_erc20(token))
+    }
+
+    /// Internal implementation of `release_eth`
+    fn _release_eth(&mut self) -> Result<(), Vec<u8>> {
+        let amount = self.releasable_eth();
+        let current_eth_released = self.released_eth() + amount;
+        self.eth_released.set(current_eth_released);
+
+        let owner = self.ownable.owner();
+        // SAFETY: transfer cannot fail;
+        transfer_eth(owner, amount)?;
+        evm::log(EtherReleased { beneficiary: owner, value: amount });
+        Ok(())
+    }
+
+    /// Internal implementation of `release_erc20`
+    fn _release_erc20(&mut self, token: Address) -> Result<(), Error> {
+        let amount = self.releasable_erc20(token)?;
+        let current_erc20_released = self.released_erc20(token) + amount;
+        self.erc20_released.insert(token, current_erc20_released);
+
+        // remote Erc20 contract transfer call
+        let call_function =
+            function_selector!("transfer", Address, U256).to_vec();
+        // SAFETY: cannot panic as address are 20 bytes in length;
+        let beneficiary: [u8; 20] = self.ownable.owner().try_into().unwrap();
+
+        let call_data = ethabi::encode(&[
+            Token::Bytes(call_function),
+            Token::Address(beneficiary.into()),
+            Token::Bytes(amount.to_be_bytes_vec()),
+        ]);
+
+        let _result =
+            call(Call::new_in(self), token, &call_data).map_err(|_| {
+                Error::RemoteContractCallFailed(RemoteContractCallFailed {})
+            })?;
+        Ok(())
+    }
+
+    /// Internal implementation of `vested_erc20_amount`
+    fn _vested_erc20_amount(
+        &mut self,
+        token: Address,
+        timestamp: u64,
+    ) -> Result<U256, Error> {
+        // remote ERC20 contract balance_of call
+        let balance: U256 = {
+            let call_function =
+                function_selector!("balanceOf", Address).to_vec();
+            // SAFETY: cannot panic as address are 20 bytes in length;
+            let vesting_address: [u8; 20] =
+                contract::address().to_vec().try_into().unwrap();
+
+            let call_data = ethabi::encode(&[
+                Token::Bytes(call_function),
+                Token::Address(vesting_address.into()),
+            ]);
+
+            let encoded_erc20_balance = static_call(
+                Call::new_in(self),
+                token,
+                &call_data,
+            )
+            .map_err(|_| {
+                Error::RemoteContractCallFailed(RemoteContractCallFailed {})
+            })?;
+
+            Uint::<256>::abi_decode(&encoded_erc20_balance, true)
+                .map_err(|_| Error::FailedToDecodeValue(FailedToDecode {}))?
+        };
+
+        // SAFETY: cannot panic, as timestamp is always u64;
+        let timestamp = U64::try_from(timestamp).unwrap();
+        Ok(self
+            .vesting_schedule(balance + self.released_erc20(token), timestamp))
     }
 }
 

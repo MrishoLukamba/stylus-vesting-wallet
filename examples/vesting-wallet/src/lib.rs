@@ -11,7 +11,7 @@ use openzeppelin_stylus::{
 };
 use stylus_sdk::{
     msg,
-    prelude::{entrypoint, storage,public},
+    prelude::{entrypoint, public, storage},
 };
 
 #[storage]
