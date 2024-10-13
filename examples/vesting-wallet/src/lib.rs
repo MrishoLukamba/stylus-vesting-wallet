@@ -4,7 +4,6 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use alloy_primitives::Address;
-
 use openzeppelin_stylus::{
     access::ownable::Ownable,
     finance::vesting_wallet::{IVesting, VestingWallet},

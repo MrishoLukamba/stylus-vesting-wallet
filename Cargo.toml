@@ -19,7 +19,7 @@ members = [
   "examples/basic/script",
   "examples/ecdsa",
   "examples/vesting-wallet",
-  "benches", 
+  "benches" 
 ]
 default-members = [
   "contracts",

@@ -8,23 +8,27 @@
 //! This contract has referenced the `OpenZeppelin` vesting_wallet
 //! implementation guidelines
 //! [VestingWallet]
-//! This contract module depends `ERC-20`[crate::token::erc20] and `Ownable`[crate::access::ownable] contracts
+//! This contract module depends `ERC-20`[crate::token::erc20] and
+//! `Ownable`[crate::access::ownable] contracts
 
 extern crate alloc;
 
-use crate::access::ownable::Ownable;
 use alloc::vec::Vec;
+
 use alloy_primitives::{uint, Address, U256, U64};
-use alloy_sol_types::sol_data::Uint;
-use alloy_sol_types::{sol, SolType};
+use alloy_sol_types::{sol, sol_data::Uint, SolType};
 use ethabi::Token;
 use openzeppelin_stylus_proc::interface_id;
-use stylus_sdk::call::{call, static_call, transfer_eth, Call};
-use stylus_sdk::prelude::{public, SolidityError, TopLevelStorage};
 use stylus_sdk::{
-    block, contract, evm, function_selector,
-    prelude::storage,
+    block,
+    call::{call, static_call, transfer_eth, Call},
+    contract, evm, function_selector,
+    prelude::{public, storage, SolidityError, TopLevelStorage},
     storage::{StorageMap, StorageU256, StorageU64},
+};
+
+use crate::{
+    access::ownable::Ownable, utils::math::storage::AddAssignUnchecked,
 };
 
 sol! {
@@ -64,7 +68,8 @@ sol! {
 pub enum Error {
     /// Error returned when decoding value returned after remote contract call
     FailedToDecodeValue(FailedToDecode),
-    /// Error returned when contract call fails, i.e reading contract value, sending Erc20 tokens
+    /// Error returned when contract call fails, i.e reading contract value,
+    /// sending Erc20 tokens
     RemoteContractCallFailed(RemoteContractCallFailed),
     /// Error returned when encoding value fails
     FailedToEncode(FailedToEncodeValue),
@@ -102,13 +107,14 @@ pub trait IVesting {
 
     /// Beneficiary will call this function to receive vested ether tokens
     ///
-    /// Gets the amount of releasable eth, updates the `eth_released` state and calls
-    /// `transfer_eth` with `owner` as the beneficiary and `amount` of released eth per
-    /// the `timestamp`
+    /// Gets the amount of releasable eth, updates the `eth_released` state and
+    /// calls `transfer_eth` with `owner` as the beneficiary and `amount` of
+    /// released eth per the `timestamp`
     ///
     /// **Arguments**
     ///
-    ///  * `&mut self` - allowing mutating contract and beneficiary account balance state
+    ///  * `&mut self` - allowing mutating contract and beneficiary account
+    ///    balance state
     ///
     /// **Event**
     ///
@@ -121,13 +127,14 @@ pub trait IVesting {
 
     /// Beneficiary will call this function to receive vested ERC-20 tokens
     ///
-    /// Gets the amount of releasable erc20, updates the `erc20_released` state and constructs
-    /// a `ERC20::transfer` remote call with `owner` as the beneficiary and `amount` of released
-    /// Erc20 token per the `timestamp`
+    /// Gets the amount of releasable erc20, updates the `erc20_released` state
+    /// and constructs a `ERC20::transfer` remote call with `owner` as the
+    /// beneficiary and `amount` of released Erc20 token per the `timestamp`
     ///
     /// **Arguments**
     ///
-    ///  * `&mut self` - allowing mutating contract and beneficiary account balance state
+    ///  * `&mut self` - allowing mutating contract and beneficiary account
+    ///    balance state
     ///  * `token` - specifying which ERC-20 token address to release
     ///
     /// **Event**
@@ -136,7 +143,8 @@ pub trait IVesting {
     ///
     /// **Error**
     ///
-    /// Returns [Error::RemoteContractCallFailed] if it fails to send ERC20 token to beneficiary
+    /// Returns [Error::RemoteContractCallFailed] if it fails to send ERC20
+    /// token to beneficiary
     fn release_erc20(&mut self, token: Address) -> Result<(), Self::Error>;
 
     /// Calculates the amount of ether that has already vested.
@@ -150,7 +158,8 @@ pub trait IVesting {
     /// Calculates the amount of ERC-20 that has already vested.
     /// Default implementation is a linear vesting curve.
     ///
-    /// Gets the contract's Erc20 balance by constructing a `Erc20::balance_of` remote call
+    /// Gets the contract's Erc20 balance by constructing a `Erc20::balance_of`
+    /// remote call
     ///
     /// **Arguments**
     ///
@@ -159,7 +168,8 @@ pub trait IVesting {
     ///
     /// **Error**
     ///
-    /// * returns [FailedToDecode] if the value returned from the remote calls fails to decode
+    /// * returns [FailedToDecode] if the value returned from the remote calls
+    ///   fails to decode
     /// * returns [RemoteContractCallFailed] if the remote call fails
     fn vested_erc20_amount(
         &mut self,
@@ -192,6 +202,7 @@ unsafe impl TopLevelStorage for VestingWallet {}
 #[public]
 impl IVesting for VestingWallet {
     type Error = Error;
+
     #[payable]
     fn receive_eth(&mut self) {}
 
@@ -258,11 +269,13 @@ impl VestingWallet {
         } else if timestamp >= self.end() {
             total_alloc
         } else {
-            // calculate the elapsed time as a fraction of duration and multiplying it by the allocated amount.
+            // calculate the elapsed time as a fraction of duration and
+            // multiplying it by the allocated amount.
             (total_alloc * (timestamp - self.start()).to::<U256>())
                 / self.duration()
         }
     }
+
     /// Getter for the amount of releasable eth.
     fn releasable_eth(&self) -> U256 {
         let timestamp = block::timestamp();
@@ -283,8 +296,9 @@ impl VestingWallet {
     /// Internal implementation of `release_eth`
     fn _release_eth(&mut self) -> Result<(), Vec<u8>> {
         let amount = self.releasable_eth();
-        let current_eth_released = self.released_eth() + amount;
-        self.eth_released.set(current_eth_released);
+        // SAFETY: cannot overflow, it is unreleastic the balance overflowing
+        // U256::MAX
+        self.eth_released.checked_add(amount).unwrap();
 
         let owner = self.ownable.owner();
         // SAFETY: transfer cannot fail;
@@ -296,8 +310,9 @@ impl VestingWallet {
     /// Internal implementation of `release_erc20`
     fn _release_erc20(&mut self, token: Address) -> Result<(), Error> {
         let amount = self.releasable_erc20(token)?;
-        let current_erc20_released = self.released_erc20(token) + amount;
-        self.erc20_released.insert(token, current_erc20_released);
+        // SAFETY: cannot overflow, it is unreleastic the balance overflowing
+        // U256::MAX
+        self.erc20_released.setter(token).add_assign_unchecked(amount);
 
         // remote Erc20 contract transfer call
         let call_function =
@@ -330,7 +345,7 @@ impl VestingWallet {
                 function_selector!("balanceOf", Address).to_vec();
             // SAFETY: cannot panic as address are 20 bytes in length;
             let vesting_address: [u8; 20] =
-                contract::address().to_vec().try_into().unwrap();
+                contract::address().try_into().unwrap();
 
             let call_data = ethabi::encode(&[
                 Token::Bytes(call_function),
@@ -357,14 +372,20 @@ impl VestingWallet {
     }
 }
 
+// ============================================================================
+// Unit Motsu Tests: Vesting Wallet
+// ============================================================================
 #[cfg(all(test, feature = "std"))]
 mod tests {
-    use super::block;
-    use crate::finance::vesting_wallet::{IVesting, VestingWallet};
-    use crate::token::erc20::{Erc20, IErc20};
     use alloy_primitives::{address, uint, U256, U64};
     use motsu::prelude::*;
     use stylus_sdk::{call::transfer_eth, contract};
+
+    use super::block;
+    use crate::{
+        finance::vesting_wallet::{IVesting, VestingWallet},
+        token::erc20::{Erc20, IErc20},
+    };
 
     // helper macro
     macro_rules! assert_ok {
@@ -398,9 +419,10 @@ mod tests {
         assert_ok!(transfer_eth(vesting_addr, amount));
 
         // NOTE: we cannot test contract eth balance after transfer_eth()
-        // error returned: dyld[74269]: missing symbol called when calling contract::balance();
-        // no function in motsu::shim
-        // assert_eq!(amount,contrac&self,call: Call<()>, account: Address// but it will be covered in e2e tests
+        // error returned: dyld[74269]: missing symbol called when calling
+        // contract::balance(); no function in motsu::shim
+        // assert_eq!(amount,contrac&self,call: Call<()>, account: Address// but
+        // it will be covered in e2e tests
     }
 
     #[motsu::test]
@@ -460,8 +482,8 @@ mod tests {
 
     #[motsu::test]
     fn linear_vesting_schedule_works(contract: VestingWallet) {
-        // testing one year linear vesting, should return fraction of total allocation
-        // the schedule tested quarterly
+        // testing one year linear vesting, should return fraction of total
+        // allocation the schedule tested quarterly
 
         let timestamp = U64::try_from(block::timestamp()).unwrap();
         // amount in wei
@@ -514,7 +536,8 @@ mod tests {
 
         contract.start.set(start);
         contract.duration.set(uint!(0_U64));
-        // lock funds until timestamp >= start, and release all funds without vesting
+        // lock funds until timestamp >= start, and release all funds without
+        // vesting
         let vested_amount = contract.vesting_schedule(amount, timestamp);
         assert_eq!(vested_amount, uint!(0_U256));
         // time elapsed
@@ -537,8 +560,9 @@ mod tests {
         let expected_q1 =
             uint!(25_000_U256) * uint!(10_U256).pow(uint!(18_U256));
 
-        // assert_eq!(contract.vested_eth_amount(start + 5_929_200_u64),expected_q1);
-        // cannot compile due to contract::balance() not available in the SHIM
-        // this will be tested in e2e tests
+        // assert_eq!(contract.vested_eth_amount(start +
+        // 5_929_200_u64),expected_q1); cannot compile due to
+        // contract::balance() not available in the SHIM this will be
+        // tested in e2e tests
     }
 }
