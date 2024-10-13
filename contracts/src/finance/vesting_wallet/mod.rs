@@ -5,11 +5,11 @@
 //! which will release the token to the beneficiary following a given,
 //! customizable, vesting schedule
 //!
-//! This contract has referenced the `OpenZeppelin` vesting_wallet
+//! This contract has referenced the `OpenZeppelin` `vesting_wallet`
 //! implementation guidelines
-//! [VestingWallet]
-//! This contract module depends `ERC-20`[crate::token::erc20] and
-//! `Ownable`[crate::access::ownable] contracts
+//! [`VestingWallet`]
+//! This contract module depends `ERC-20`[`crate::token::erc20`] and
+//! `Ownable`[`crate::access::ownable`] contracts
 
 extern crate alloc;
 
@@ -63,7 +63,7 @@ sol! {
     error FailedToEncodeValue();
 }
 
-/// [VestingWallet] error
+/// [`VestingWallet`] error
 #[derive(SolidityError, Debug)]
 pub enum Error {
     /// Error returned when decoding value returned after remote contract call
@@ -95,12 +95,9 @@ pub struct VestingWallet {
 /// `OpenZeppelin` solidity implementation
 #[interface_id]
 pub trait IVesting {
-    /// Error type returned in methods
-    type Error: Into<alloc::vec::Vec<u8>>;
-
     /// The contract should be able to receive ether token
     ///
-    /// **Arguments**
+    /// # Arguments
     ///
     ///  * `&mut self` - allowing mutating contract account balance state
     fn receive_eth(&mut self);
@@ -111,16 +108,16 @@ pub trait IVesting {
     /// calls `transfer_eth` with `owner` as the beneficiary and `amount` of
     /// released eth per the `timestamp`
     ///
-    /// **Arguments**
+    /// # Arguments
     ///
     ///  * `&mut self` - allowing mutating contract and beneficiary account
     ///    balance state
     ///
-    /// **Event**
+    /// # Event
     ///
     /// Emits [EtherReleased] event
     ///
-    /// **Error**
+    /// # Errors
     ///
     /// Returns encoded error type defined on `transfer_eth` function
     fn release_eth(&mut self) -> Result<(), Vec<u8>>;
@@ -131,26 +128,26 @@ pub trait IVesting {
     /// and constructs a `ERC20::transfer` remote call with `owner` as the
     /// beneficiary and `amount` of released Erc20 token per the `timestamp`
     ///
-    /// **Arguments**
+    /// # Arguments
     ///
     ///  * `&mut self` - allowing mutating contract and beneficiary account
     ///    balance state
     ///  * `token` - specifying which ERC-20 token address to release
     ///
-    /// **Event**
+    /// # Event
     ///
     /// Emits [ERC20Released] event
     ///
-    /// **Error**
+    /// # Errors
     ///
     /// Returns [Error::RemoteContractCallFailed] if it fails to send ERC20
     /// token to beneficiary
-    fn release_erc20(&mut self, token: Address) -> Result<(), Self::Error>;
+    fn release_erc20(&mut self, token: Address) -> Result<(), Error>;
 
     /// Calculates the amount of ether that has already vested.
     /// Default implementation is a linear vesting curve.
     ///
-    /// **Arguments**
+    /// # Arguments
     ///
     /// * `timestamp` - block timestamp
     fn vested_eth_amount(&self, timestamp: u64) -> U256;
@@ -161,12 +158,12 @@ pub trait IVesting {
     /// Gets the contract's Erc20 balance by constructing a `Erc20::balance_of`
     /// remote call
     ///
-    /// **Arguments**
+    /// # Arguments
     ///
     /// * `token` - Erc20 contract address
     /// * `timestamp` -  block timestamp
     ///
-    /// **Error**
+    /// # Errors
     ///
     /// * returns [FailedToDecode] if the value returned from the remote calls
     ///   fails to decode
@@ -175,7 +172,7 @@ pub trait IVesting {
         &mut self,
         token: Address,
         timestamp: u64,
-    ) -> Result<U256, Self::Error>;
+    ) -> Result<U256, Error>;
 
     /// Getter for the start timestamp.
     fn start(&self) -> U256;
@@ -191,7 +188,7 @@ pub trait IVesting {
 
     /// Amount of ERC-20 token already released
     ///
-    /// **Argument**
+    /// # Argument
     ///
     /// * `token` - ERC-20 token address
     fn released_erc20(&self, token: Address) -> U256;
@@ -201,8 +198,6 @@ unsafe impl TopLevelStorage for VestingWallet {}
 
 #[public]
 impl IVesting for VestingWallet {
-    type Error = Error;
-
     #[payable]
     fn receive_eth(&mut self) {}
 
@@ -210,7 +205,7 @@ impl IVesting for VestingWallet {
         self._release_eth()
     }
 
-    fn release_erc20(&mut self, token: Address) -> Result<(), Self::Error> {
+    fn release_erc20(&mut self, token: Address) -> Result<(), Error> {
         self._release_erc20(token)
     }
 
@@ -225,7 +220,7 @@ impl IVesting for VestingWallet {
         &mut self,
         token: Address,
         timestamp: u64,
-    ) -> Result<U256, Self::Error> {
+    ) -> Result<U256, Error> {
         self._vested_erc20_amount(token, timestamp)
     }
 
@@ -317,8 +312,8 @@ impl VestingWallet {
         // remote Erc20 contract transfer call
         let call_function =
             function_selector!("transfer", Address, U256).to_vec();
-        // SAFETY: cannot panic as address are 20 bytes in length;
-        let beneficiary: [u8; 20] = self.ownable.owner().try_into().unwrap();
+
+        let beneficiary: [u8; 20] = self.ownable.owner().into();
 
         let call_data = ethabi::encode(&[
             Token::Bytes(call_function),
@@ -343,9 +338,8 @@ impl VestingWallet {
         let balance: U256 = {
             let call_function =
                 function_selector!("balanceOf", Address).to_vec();
-            // SAFETY: cannot panic as address are 20 bytes in length;
-            let vesting_address: [u8; 20] =
-                contract::address().try_into().unwrap();
+
+            let vesting_address: [u8; 20] = contract::address().into();
 
             let call_data = ethabi::encode(&[
                 Token::Bytes(call_function),
