@@ -33,15 +33,3 @@ contract VestingWalletExample {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
-
-
-
-contract Erc20VestingE2e {
-    mapping(address account => uint256) private _balances;
-    mapping(address account => mapping(address spender => uint256)) private _allowances;
-    uint256 private _totalSupply;
-
-    constructor(uint256 cap_) {
-        _totalSupply = cap_;
-    }
-}
