@@ -23,7 +23,7 @@ pub struct VestingWalletExample {
 }
 
 #[public]
-#[inherit(Ownable, VestingWallet)]
+#[inherit(VestingWallet, Ownable)]
 impl VestingWalletExample {
     /// Overrides the current [`VestingWallet::release_eth`] implementation,
     ///

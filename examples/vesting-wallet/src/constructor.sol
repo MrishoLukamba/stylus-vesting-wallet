@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
 contract VestingWalletExample {
@@ -6,11 +7,41 @@ contract VestingWalletExample {
     uint64 private immutable _start;
     uint64 private immutable _duration;
     address private _owner;
-   
+
+    error OwnableInvalidOwner(address owner);
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     constructor(address beneficiary, uint64 startTimestamp, uint64 durationSeconds) payable {
+
+         if (beneficiary == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+
+        _transferOwnership(beneficiary);      
+
         _start = startTimestamp;
         _duration = durationSeconds;
-        _owner = beneficiary;
+    
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+
+
+contract Erc20VestingE2e {
+    mapping(address account => uint256) private _balances;
+    mapping(address account => mapping(address spender => uint256)) private _allowances;
+    uint256 private _totalSupply;
+
+    constructor(uint256 cap_) {
+        _totalSupply = cap_;
     }
 }

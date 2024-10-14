@@ -38,7 +38,7 @@ default-members = [
   "examples/access-control",
   "examples/basic/token",
   "examples/ecdsa",
-  "examples/vesting-wallet",
+  "examples/vesting-wallet"
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages
@@ -104,6 +104,7 @@ quote = "1.0.35"
 openzeppelin-stylus = { path = "contracts" }
 openzeppelin-stylus-proc = { path = "contracts-proc" }
 openzeppelin-crypto = { path = "lib/crypto" }
+
 motsu = { path = "lib/motsu"}
 motsu-proc = { path = "lib/motsu-proc", version = "0.1.0" }
 e2e = { path = "lib/e2e" }

@@ -192,6 +192,16 @@ pub trait IVesting {
     ///
     /// * `token` - ERC-20 token address
     fn released_erc20(&self, token: Address) -> U256;
+
+    /// Getter for the amount of releasable eth.
+    fn releasable_eth(&self) -> U256;
+
+    /// Getter for the amount of releasable ERC-20 token.
+    ///
+    /// # Arguments
+    ///
+    ///  * `token` - specifying ERC-20 token contract address
+    fn releasable_erc20(&mut self, token: Address) -> Result<U256, Error>;
 }
 
 unsafe impl TopLevelStorage for VestingWallet {}
@@ -245,6 +255,17 @@ impl IVesting for VestingWallet {
     fn released_erc20(&self, token: Address) -> U256 {
         self.erc20_released.get(token)
     }
+
+    fn releasable_eth(&self) -> U256 {
+        let timestamp = block::timestamp();
+        self.vested_eth_amount(timestamp) - self.released_eth()
+    }
+
+    fn releasable_erc20(&mut self, token: Address) -> Result<U256, Error> {
+        let timestamp = block::timestamp();
+        let vested_erc20 = self.vested_erc20_amount(token, timestamp)?;
+        Ok(vested_erc20 - self.released_erc20(token))
+    }
 }
 
 impl VestingWallet {
@@ -269,23 +290,6 @@ impl VestingWallet {
             (total_alloc * (timestamp - self.start()).to::<U256>())
                 / self.duration()
         }
-    }
-
-    /// Getter for the amount of releasable eth.
-    fn releasable_eth(&self) -> U256 {
-        let timestamp = block::timestamp();
-        self.vested_eth_amount(timestamp) - self.released_eth()
-    }
-
-    /// Getter for the amount of releasable ERC-20 token.
-    ///
-    /// **Arguments**
-    ///
-    ///  * `token` - specifying ERC-20 token contract address
-    fn releasable_erc20(&mut self, token: Address) -> Result<U256, Error> {
-        let timestamp = block::timestamp();
-        let vested_erc20 = self.vested_erc20_amount(token, timestamp)?;
-        Ok(vested_erc20 - self.released_erc20(token))
     }
 
     /// Internal implementation of `release_eth`
