@@ -48,12 +48,19 @@ async fn erc20_deploy(name: &str, symbol: &str, acc: Account) -> Address {
     let manifest_dir =
         std::env::current_dir().expect("should get current dir from env");
 
-    let wasm_path = manifest_dir
+    // Go back two directories
+    let target_dir = manifest_dir
+        .parent() // Go up one directory
+        .expect("Failed to get parent directory") // Handle potential error
+        .parent() // Go up another directory
+        .expect("Failed to get parent directory");
+
+    let wasm_path = target_dir
         .join("target")
         .join("wasm32-unknown-unknown")
         .join("release")
-        .join("basic_example.wasm");
-    let sol_path = manifest_dir
+        .join("erc20_example.wasm");
+    let sol_path = target_dir
         .join("examples")
         .join("erc20")
         .join("src")
