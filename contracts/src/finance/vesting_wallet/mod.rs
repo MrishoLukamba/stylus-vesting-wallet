@@ -18,7 +18,6 @@ use alloc::vec::Vec;
 use alloy_primitives::{uint, Address, U256, U64};
 use alloy_sol_types::{sol, sol_data::Uint, SolType};
 use ethabi::Token;
-use openzeppelin_stylus_proc::interface_id;
 use stylus_sdk::{
     block,
     call::{call, static_call, transfer_eth, Call},
@@ -88,19 +87,18 @@ pub struct VestingWallet {
     /// being set
     duration: StorageU64,
     /// access to ownable contract [crate::access::ownable]
-    ownable: Ownable,
+    pub ownable: Ownable,
 }
 
 /// Trait `IVesting` defines all necessary vesting functionality per
 /// `OpenZeppelin` solidity implementation
-#[interface_id]
 pub trait IVesting {
     /// The contract should be able to receive ether token
     ///
     /// # Arguments
     ///
     ///  * `&mut self` - allowing mutating contract account balance state
-    fn receive_eth(&mut self);
+    fn receive(&mut self);
 
     /// Beneficiary will call this function to receive vested ether tokens
     ///
@@ -209,16 +207,19 @@ unsafe impl TopLevelStorage for VestingWallet {}
 #[public]
 impl IVesting for VestingWallet {
     #[payable]
-    fn receive_eth(&mut self) {}
+    fn receive(&mut self) {}
 
+    #[selector(name = "release")]
     fn release_eth(&mut self) -> Result<(), Vec<u8>> {
         self._release_eth()
     }
 
+    #[selector(name = "release")]
     fn release_erc20(&mut self, token: Address) -> Result<(), Error> {
         self._release_erc20(token)
     }
 
+    #[selector(name = "vestedAmount")]
     fn vested_eth_amount(&self, timestamp: u64) -> U256 {
         let balance = contract::balance();
         // SAFETY: cannot panic, as timestamp is always u64;
@@ -226,6 +227,7 @@ impl IVesting for VestingWallet {
         self.vesting_schedule(balance + self.released_eth(), timestamp)
     }
 
+    #[selector(name = "vestedAmount")]
     fn vested_erc20_amount(
         &mut self,
         token: Address,
@@ -248,19 +250,23 @@ impl IVesting for VestingWallet {
         self.start() + duration
     }
 
+    #[selector(name = "released")]
     fn released_eth(&self) -> U256 {
         *self.eth_released
     }
 
+    #[selector(name = "released")]
     fn released_erc20(&self, token: Address) -> U256 {
         self.erc20_released.get(token)
     }
 
+    #[selector(name = "releasable")]
     fn releasable_eth(&self) -> U256 {
         let timestamp = block::timestamp();
         self.vested_eth_amount(timestamp) - self.released_eth()
     }
 
+    #[selector(name = "releasable")]
     fn releasable_erc20(&mut self, token: Address) -> Result<U256, Error> {
         let timestamp = block::timestamp();
         let vested_erc20 = self.vested_erc20_amount(token, timestamp)?;

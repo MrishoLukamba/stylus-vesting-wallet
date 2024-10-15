@@ -4,10 +4,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use alloy_primitives::Address;
-use openzeppelin_stylus::{
-    access::ownable::Ownable,
-    finance::vesting_wallet::{IVesting, VestingWallet},
-};
+use openzeppelin_stylus::finance::vesting_wallet::{IVesting, VestingWallet};
 use stylus_sdk::{
     msg,
     prelude::{entrypoint, public, storage},
@@ -18,21 +15,20 @@ use stylus_sdk::{
 pub struct VestingWalletExample {
     #[borrow]
     vesting_wallet: VestingWallet,
-    #[borrow]
-    ownable: Ownable,
 }
 
 #[public]
-#[inherit(VestingWallet, Ownable)]
+#[inherit(VestingWallet)]
 impl VestingWalletExample {
     /// Overrides the current [`VestingWallet::release_eth`] implementation,
     ///
     /// Adds checking if the owner is the caller of the function.
     /// limiting access only to the owner of the contract
     /// no-op if the caller is not the owner
+    #[selector(name = "release")]
     pub fn release_eth(&mut self) -> Result<(), Vec<u8>> {
         let caller = msg::sender();
-        if caller != self.ownable.owner() {
+        if caller != self.vesting_wallet.ownable.owner() {
             return Ok(());
         }
         self.vesting_wallet.release_eth()
@@ -43,9 +39,10 @@ impl VestingWalletExample {
     /// Adds checking if the owner is the caller of the function.
     /// limiting access only to the owner of the contract
     /// no-op if the caller is not the owner
+    #[selector(name = "release")]
     pub fn release_erc20(&mut self, token: Address) -> Result<(), Vec<u8>> {
         let caller = msg::sender();
-        if caller != self.ownable.owner() {
+        if caller != self.vesting_wallet.ownable.owner() {
             return Ok(());
         }
 
