@@ -10,11 +10,12 @@ use alloy::{
     sol,
 };
 use alloy_primitives::utils::parse_ether;
+use alloy_sol_types::SolConstructor;
 use e2e::{receipt, watch, Account, EventExt, ReceiptExt, Revert};
 use eyre::Result;
 use futures::StreamExt;
 use koba::config::Deploy;
-use alloy_sol_types::SolConstructor;
+
 use crate::VestingWalletExample::constructorCall;
 
 sol!("src/constructor.sol");
@@ -82,7 +83,6 @@ async fn erc20_deploy(name: &str, symbol: &str, acc: Account) -> Address {
         .contract_address()
         .expect("should return contract address")
 }
-
 
 fn vesting_constructor(
     alice: Address,
