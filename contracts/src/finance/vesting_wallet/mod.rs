@@ -14,13 +14,13 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-
+mod erc20;
 use alloy_primitives::{uint, Address, U256, U64};
-use alloy_sol_types::{sol, sol_data::Uint, SolType};
-use ethabi::Token;
+use alloy_sol_types::sol;
+use erc20::Erc20;
 use stylus_sdk::{
     block,
-    call::{call, static_call, transfer_eth, Call},
+    call::{transfer_eth, Call},
     contract, evm, function_selector,
     prelude::{public, storage, SolidityError, TopLevelStorage},
     storage::{StorageMap, StorageU256, StorageU64},
@@ -320,21 +320,18 @@ impl VestingWallet {
         self.erc20_released.setter(token).add_assign_unchecked(amount);
 
         // remote Erc20 contract transfer call
-        let call_function =
-            function_selector!("transfer", Address, U256).to_vec();
+        let owner = self.ownable.owner();
+        let erc20_interactor = Erc20::new(token);
+        let call = Call::new_in(self);
 
-        let beneficiary: [u8; 20] = self.ownable.owner().into();
-
-        let call_data = ethabi::encode(&[
-            Token::Bytes(call_function),
-            Token::Address(beneficiary.into()),
-            Token::Bytes(amount.to_be_bytes_vec()),
-        ]);
-
-        let _result =
-            call(Call::new_in(self), token, &call_data).map_err(|_| {
+        let result =
+            erc20_interactor.transfer(call, owner, amount).map_err(|_err| {
                 Error::RemoteContractCallFailed(RemoteContractCallFailed {})
             })?;
+        if !result {
+            Err(Error::RemoteContractCallFailed(RemoteContractCallFailed {}))?
+        }
+        evm::log(ERC20Released { beneficiary: owner, token, value: amount });
         Ok(())
     }
 
@@ -346,27 +343,13 @@ impl VestingWallet {
     ) -> Result<U256, Error> {
         // remote ERC20 contract balance_of call
         let balance: U256 = {
-            let call_function =
-                function_selector!("balanceOf", Address).to_vec();
-
-            let vesting_address: [u8; 20] = contract::address().into();
-
-            let call_data = ethabi::encode(&[
-                Token::Bytes(call_function),
-                Token::Address(vesting_address.into()),
-            ]);
-
-            let encoded_erc20_balance = static_call(
-                Call::new_in(self),
-                token,
-                &call_data,
-            )
-            .map_err(|_| {
-                Error::RemoteContractCallFailed(RemoteContractCallFailed {})
-            })?;
-
-            Uint::<256>::abi_decode(&encoded_erc20_balance, true)
-                .map_err(|_| Error::FailedToDecodeValue(FailedToDecode {}))?
+            let erc20_instance = Erc20::new(token);
+            let result = erc20_instance
+                .balance_of(&mut *self, contract::address())
+                .map_err(|_err| {
+                    Error::RemoteContractCallFailed(RemoteContractCallFailed {})
+                })?;
+            result
         };
 
         // SAFETY: cannot panic, as timestamp is always u64;
