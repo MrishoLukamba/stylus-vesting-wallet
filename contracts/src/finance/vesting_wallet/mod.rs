@@ -200,6 +200,50 @@ pub trait IVesting {
     ///
     ///  * `token` - specifying ERC-20 token contract address
     fn releasable_erc20(&mut self, token: Address) -> Result<U256, Error>;
+
+    /// Re-exporting `Ownable` contract functions for easier accessing
+
+    /// Returns the address of the current owner.
+    fn owner(&self) -> Address;
+
+    /// Checks if the `msg::sender` is set as the owner.
+    ///
+    /// # Errors
+    ///
+    /// If called by any account other than the owner, then the error
+    /// [`crate::access::ownable::Error::UnauthorizedAccount`] is returned.
+    fn only_owner(&self) -> Result<(), crate::access::ownable::Error>;
+
+    /// Transfers ownership of the contract to a new account (`new_owner`). Can
+    /// only be called by the current owner.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `new_owner` - The next owner of this contract.
+    ///
+    /// # Errors
+    ///
+    /// If `new_owner` is the zero address, then the error
+    /// `OwnableInvalidOwner` is returned.
+    fn transfer_ownership(
+        &mut self,
+        new_owner: Address,
+    ) -> Result<(), crate::access::ownable::Error>;
+
+    /// Leaves the contract without owner. It will not be possible to call
+    /// [`Self::only_owner`] functions. Can only be called by the current owner.
+    ///
+    /// NOTE: Renouncing ownership will leave the contract without an owner,
+    /// thereby disabling any functionality that is only available to the owner.
+    ///
+    /// # Errors
+    ///
+    /// If not called by the owner, then the error
+    /// [`crate::access::ownable::Error::UnauthorizedAccount`] is returned.
+    fn renounce_ownership(
+        &mut self,
+    ) -> Result<(), crate::access::ownable::Error>;
 }
 
 unsafe impl TopLevelStorage for VestingWallet {}
@@ -271,6 +315,56 @@ impl IVesting for VestingWallet {
         let timestamp = block::timestamp();
         let vested_erc20 = self.vested_erc20_amount(token, timestamp)?;
         Ok(vested_erc20 - self.released_erc20(token))
+    }
+
+    // ======================================================= //
+    fn owner(&self) -> Address {
+        self.ownable.owner()
+    }
+
+    /// Checks if the `msg::sender` is set as the owner.
+    ///
+    /// # Errors
+    ///
+    /// If called by any account other than the owner, then the error
+    /// [`crate::access::ownable::Error::UnauthorizedAccount`] is returned.
+    fn only_owner(&self) -> Result<(), crate::access::ownable::Error> {
+        self.ownable.only_owner()
+    }
+
+    /// Transfers ownership of the contract to a new account (`new_owner`). Can
+    /// only be called by the current owner.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `new_owner` - The next owner of this contract.
+    ///
+    /// # Errors
+    ///
+    /// If `new_owner` is the zero address, then the error
+    /// `OwnableInvalidOwner` is returned.
+    fn transfer_ownership(
+        &mut self,
+        new_owner: Address,
+    ) -> Result<(), crate::access::ownable::Error> {
+        self.ownable.transfer_ownership(new_owner)
+    }
+
+    /// Leaves the contract without owner. It will not be possible to call
+    /// [`Self::only_owner`] functions. Can only be called by the current owner.
+    ///
+    /// NOTE: Renouncing ownership will leave the contract without an owner,
+    /// thereby disabling any functionality that is only available to the owner.
+    ///
+    /// # Errors
+    ///
+    /// If not called by the owner, then the error
+    /// [`crate::access::ownable::Error::UnauthorizedAccount`] is returned.
+    fn renounce_ownership(
+        &mut self,
+    ) -> Result<(), crate::access::ownable::Error> {
+        self.ownable.renounce_ownership()
     }
 }
 

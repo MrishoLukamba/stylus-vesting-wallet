@@ -4,10 +4,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use alloy_primitives::Address;
-use openzeppelin_stylus::{
-    access::ownable::Ownable,
-    finance::vesting_wallet::{IVesting, VestingWallet},
-};
+use openzeppelin_stylus::finance::vesting_wallet::{IVesting, VestingWallet};
 use stylus_sdk::{
     msg,
     prelude::{entrypoint, public, storage},
@@ -18,12 +15,10 @@ use stylus_sdk::{
 pub struct VestingWalletExample {
     #[borrow]
     vesting_wallet: VestingWallet,
-    #[borrow]
-    ownable: Ownable,
 }
 
 #[public]
-#[inherit(VestingWallet, Ownable)]
+#[inherit(VestingWallet)]
 impl VestingWalletExample {
     /// Overrides the current [`VestingWallet::release_eth`] implementation,
     ///

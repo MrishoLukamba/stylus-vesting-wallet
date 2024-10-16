@@ -1,5 +1,7 @@
 use stylus_sdk::prelude::sol_interface;
 sol_interface! {
+    /// Same [`crate::token::erc20::IErc20`] interface re-exported
+    /// for easily interaction on sending remote calls
     interface Erc20 {
         function name() external view returns (string name);
         function symbol() external view returns (string symbol);

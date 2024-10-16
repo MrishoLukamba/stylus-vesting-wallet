@@ -29,6 +29,14 @@ sol!(
 
         function releasable(address token) external returns (uint256 amount);
 
+        function owner() external view returns (address owner);
+
+        function onlyOwner() external view;
+
+        function transferOwnership(address new_owner) external;
+
+        function renounceOwnership() external;
+
         #[derive(Debug, PartialEq)]
         event EtherReleased(address indexed beneficiary, uint256 value);
 
@@ -40,14 +48,6 @@ sol!(
         error RemoteContractCallFailed();
 
         error FailedToEncodeValue();
-
-        function owner() external view returns (address owner);
-
-        function onlyOwner() external view;
-
-        function transferOwnership(address new_owner) external;
-
-        function renounceOwnership() external;
 
         error OwnableUnauthorizedAccount(address);
 

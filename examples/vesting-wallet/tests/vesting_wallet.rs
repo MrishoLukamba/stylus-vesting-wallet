@@ -486,10 +486,10 @@ async fn vesting_multiple_erc20_works(alice: Account) -> Result<()> {
     tokio::time::sleep(tokio::time::Duration::from_millis(14000)).await;
 
     // release erc20 tk1
-    let tx_receipt = receipt!(contract.release_1(tk1_contract_addr))?;
+    let _tx_receipt = receipt!(contract.release_1(tk1_contract_addr))?;
 
     // release erc20 tk2
-    let tx_receipt = receipt!(contract.release_1(tk2_contract_addr))?;
+    let _tx_receipt = receipt!(contract.release_1(tk2_contract_addr))?;
 
     // alice tk1 & tk2 balance
     let ERC20::balanceOfReturn { balance } =
@@ -515,10 +515,10 @@ async fn vesting_multiple_erc20_works(alice: Account) -> Result<()> {
     tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
 
     // release erc20 tk1
-    let tx_receipt = receipt!(contract.release_1(tk1_contract_addr))?;
+    let _tx_receipt = receipt!(contract.release_1(tk1_contract_addr))?;
 
     // release erc20 tk2
-    let tx_receipt = receipt!(contract.release_1(tk2_contract_addr))?;
+    let _tx_receipt = receipt!(contract.release_1(tk2_contract_addr))?;
 
     // alice tk1 & tk2 balances
     let ERC20::balanceOfReturn { balance } =
