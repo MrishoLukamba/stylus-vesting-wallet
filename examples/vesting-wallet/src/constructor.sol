@@ -4,8 +4,8 @@ pragma solidity ^0.8.21;
 contract VestingWalletExample {
     uint256 private _released;
     mapping(address token => uint256) private _erc20Released;
-    uint64 private immutable _start;
-    uint64 private immutable _duration;
+    uint64 private  _start;
+    uint64 private  _duration;
     address private _owner;
 
     error OwnableInvalidOwner(address owner);
@@ -20,11 +20,11 @@ contract VestingWalletExample {
             revert OwnableInvalidOwner(address(0));
         }
 
-        _transferOwnership(beneficiary);      
+        _transferOwnership(beneficiary);
 
         _start = startTimestamp;
         _duration = durationSeconds;
-    
+
     }
 
     function _transferOwnership(address newOwner) internal virtual {

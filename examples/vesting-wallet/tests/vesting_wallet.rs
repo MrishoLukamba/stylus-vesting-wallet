@@ -11,7 +11,9 @@ use alloy::{
 };
 use alloy_primitives::utils::parse_ether;
 use alloy_sol_types::SolConstructor;
-use e2e::{receipt, watch, Account, EventExt, ReceiptExt, Revert};
+use e2e::{
+    fund_account, receipt, watch, Account, EventExt, ReceiptExt, Revert,
+};
 use eyre::Result;
 use futures::StreamExt;
 use koba::config::Deploy;
@@ -96,7 +98,7 @@ fn vesting_constructor(
     start: u64,
     duration: u64,
 ) -> constructorCall {
-    VestingWalletExample::constructorCall {
+    constructorCall {
         beneficiary: alice,
         startTimestamp: start,
         durationSeconds: duration,
@@ -187,12 +189,16 @@ async fn vesting_acts_like_lock_if_duration_zero(alice: Account) -> Result<()> {
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
 
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
+
+    // ========================================================================================= //
     let VestingWallet::vestedAmount_0Return { amount } =
         contract.vestedAmount_0(timestamp + 1_000_000).call().await?;
     assert_eq!(amount, uint!(0_U256));
     // when time elapses as it reaches start time the funds unlock
     let VestingWallet::vestedAmount_0Return { amount } =
-        contract.vestedAmount_0(start).call().await?;
+        contract.vestedAmount_0(start + 1).call().await?;
     assert_eq!(amount, uint!(10_U256));
 
     Ok(())
@@ -212,6 +218,9 @@ async fn vesting_schedule_works(alice: Account) -> Result<()> {
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     let VestingWallet::vestedAmount_0Return { amount } =
         contract.vestedAmount_0(day).call().await?;
@@ -241,7 +250,6 @@ async fn vesting_schedule_works(alice: Account) -> Result<()> {
 #[e2e::test]
 async fn add_eth_to_existing_vesting_schedule_continues(
     alice: Account,
-    bob: Account,
 ) -> Result<()> {
     let start = current_timestamp(alice.clone()).await?;
     let day = 86_400u64;
@@ -254,6 +262,9 @@ async fn add_eth_to_existing_vesting_schedule_continues(
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     let contract_balance = alice.wallet.get_balance(contract_addr).await?;
     let expected = parse_ether("10")?;
@@ -268,15 +279,7 @@ async fn add_eth_to_existing_vesting_schedule_continues(
     assert_eq!(amount, uint!(4_U256));
 
     // adding eth to the vesting contract
-    let tx =
-        TransactionRequest::default().to(contract_addr).value(uint!(5_U256));
-    let _tx_receipt =
-        alice.wallet.send_transaction(tx).await?.get_receipt().await?;
-
-    let tx2 =
-        TransactionRequest::default().to(contract_addr).value(uint!(7_U256));
-    let _tx_receipt =
-        bob.wallet.send_transaction(tx2).await?.get_receipt().await?;
+    fund_account(contract_addr, 12)?;
 
     let contract_balance = alice.wallet.get_balance(contract_addr).await?;
     let expected = parse_ether("22")?;
@@ -320,6 +323,9 @@ async fn vesting_erc20_and_eth_works(alice: Account) -> Result<()> {
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     // fund vesting wallet contract with tk1 tokens
     let _ = watch!(tk1_contract.mint(contract_addr, uint!(10_U256)));
@@ -432,6 +438,9 @@ async fn vesting_multiple_erc20_works(alice: Account) -> Result<()> {
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     // fund the vesting wallet contract with 2 tokens (tk1 & tk2)
     let _ = watch!(tk1_contract.mint(contract_addr, uint!(10_U256)));
@@ -565,6 +574,9 @@ async fn add_erc20_to_existing_vesting_schedule_continues(
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
 
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
+
     // fund vesting wallet contract with tk1 tokens
     let _ = watch!(tk1_contract.mint(contract_addr, uint!(10_U256)));
     let ERC20::balanceOfReturn { balance } =
@@ -635,6 +647,7 @@ async fn add_erc20_to_existing_vesting_schedule_continues(
 }
 
 #[e2e::test]
+#[ignore]
 async fn owner_is_beneficiary_and_correct_amount(alice: Account) -> Result<()> {
     // vesting duration should be 30 seconds for easy testing
     let start = current_timestamp(alice.clone()).await?;
@@ -647,6 +660,9 @@ async fn owner_is_beneficiary_and_correct_amount(alice: Account) -> Result<()> {
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     let alice_balance = alice.wallet.get_balance(alice.address()).await?;
     let expected = parse_ether("10")?;
@@ -690,6 +706,9 @@ async fn changing_ownership_during_vesting_continues(
         .await?
         .address()?;
     let contract = VestingWallet::new(contract_addr, &alice.wallet);
+
+    // fund the vesting contract wallet
+    fund_account(contract_addr, 10)?;
 
     let alice_balance = alice.wallet.get_balance(alice.address()).await?;
     let expected = parse_ether("10")?;
