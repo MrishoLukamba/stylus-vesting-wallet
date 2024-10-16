@@ -191,6 +191,9 @@ async fn vesting_acts_like_lock_if_duration_zero(alice: Account) -> Result<()> {
 
     // fund the vesting contract wallet
     fund_account(contract_addr, 10)?;
+    // let tx = TransactionRequest::default().from(alice.address()).
+    // to(contract_addr).value(uint!(10U256)); let b = alice.wallet.
+    // send_transaction(tx).await?;
 
     // ========================================================================================= //
     let VestingWallet::vestedAmount_0Return { amount } =
@@ -647,7 +650,6 @@ async fn add_erc20_to_existing_vesting_schedule_continues(
 }
 
 #[e2e::test]
-#[ignore]
 async fn owner_is_beneficiary_and_correct_amount(alice: Account) -> Result<()> {
     // vesting duration should be 30 seconds for easy testing
     let start = current_timestamp(alice.clone()).await?;
