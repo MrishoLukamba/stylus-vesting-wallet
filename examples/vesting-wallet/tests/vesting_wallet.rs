@@ -130,25 +130,6 @@ async fn current_timestamp(alice: Account) -> Result<u64> {
     Ok(start)
 }
 
-// wait for some specific time to pass before continuing execution
-// acts like time::sleep() ,but depends on blocks progression
-// async fn wait_for_timestamp(duration: u64,account: Account) -> Result<()>{
-//     let start = current_timestamp(account.clone()).await?;
-//     let end = start + duration;
-//
-//     let mut stream =
-// account.wallet.watch_blocks().await?.into_stream().
-// flat_map(futures::stream::iter).take(5);     while let Some(hash) =
-// stream.next().await{         let timestamp =
-// account.wallet.get_block_by_hash(hash,BlockTransactionsKind::Hashes).await?.
-// expect("should return a block").header.timestamp;         println!("
-// timestamp: {timestamp} == end: {end}");         if end < timestamp {
-//             break
-//         }
-//     }
-//    Ok(())
-// }
-
 // ============================================================================
 // Integration Tests: VestingWallet
 // ============================================================================
