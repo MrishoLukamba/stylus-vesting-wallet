@@ -46,32 +46,19 @@ sol! {
 }
 
 sol! {
-    /// Error returned when type failed to decode
-    #[derive(Debug)]
-    #[allow(missing_docs)]
-    error FailedToDecode();
 
     /// Error returned when remote contract call fails
     #[derive(Debug)]
     #[allow(missing_docs)]
     error RemoteContractCallFailed();
-
-    /// Error returned when value fails to encode
-    #[derive(Debug)]
-    #[allow(missing_docs)]
-    error FailedToEncodeValue();
 }
 
 /// [`VestingWallet`] error
 #[derive(SolidityError, Debug)]
 pub enum Error {
-    /// Error returned when decoding value returned after remote contract call
-    FailedToDecodeValue(FailedToDecode),
     /// Error returned when contract call fails, i.e reading contract value,
     /// sending Erc20 tokens
     RemoteContractCallFailed(RemoteContractCallFailed),
-    /// Error returned when encoding value fails
-    FailedToEncode(FailedToEncodeValue),
 }
 
 /// State of Vesting_Wallet
@@ -163,8 +150,6 @@ pub trait IVesting {
     ///
     /// # Errors
     ///
-    /// * returns [FailedToDecode] if the value returned from the remote calls
-    ///   fails to decode
     /// * returns [RemoteContractCallFailed] if the remote call fails
     fn vested_erc20_amount(
         &mut self,
@@ -632,13 +617,13 @@ mod tests {
         let timestamp = block::timestamp();
         let start = timestamp - 5_929_200_u64;
         let duration = uint!(23_716_800_U64);
-        let amount = uint!(100_000_U256) * uint!(10_U256).pow(uint!(18_U256));
+        let _amount = uint!(100_000_U256) * uint!(10_U256).pow(uint!(18_U256));
 
         contract.start.set(U64::try_from(start).unwrap());
         contract.duration.set(duration);
 
         contract.eth_released.set(uint!(0_U256));
-        let expected_q1 =
+        let _expected_q1 =
             uint!(25_000_U256) * uint!(10_U256).pow(uint!(18_U256));
 
         // assert_eq!(contract.vested_eth_amount(start +
